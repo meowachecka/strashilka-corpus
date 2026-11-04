@@ -4,3 +4,4 @@ __pycache__/
 sample.html
 scrape.log
 test_connection.py
+corpus.db
