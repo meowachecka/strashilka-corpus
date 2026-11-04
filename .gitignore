@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+sample.html
+scrape.log
+test_connection.py
