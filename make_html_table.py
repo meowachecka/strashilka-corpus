@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
-import sqlite3, json, html
+import sqlite3, json
 
 c = sqlite3.connect("corpus_filtered.db")
-rows = c.execute("SELECT title, author, date, category, content, url FROM stories").fetchall()
+rows = c.execute("""
+    SELECT title, author, date, category, rating, votes, keywords, content, url
+    FROM stories
+""").fetchall()
 
 data = [
     {"title": t or "", "author": a or "", "date": d or "",
-     "category": cat or "", "content": txt or "", "url": u or ""}
-    for (t, a, d, cat, txt, u) in rows
+     "category": cat or "", "rating": r or "", "votes": v or "",
+     "keywords": kw or "", "content": txt or "", "url": u or ""}
+    for (t, a, d, cat, r, v, kw, txt, u) in rows
 ]
 payload = json.dumps(data, ensure_ascii=False)
 
@@ -32,7 +36,7 @@ HTML = """<!DOCTYPE html>
   th.asc::after { content: " ▲"; color: #888; font-size: 11px; }
   th.desc::after { content: " ▼"; color: #888; font-size: 11px; }
   tr:hover td { background: #fafafa; }
-  td.content { max-width: 620px; }
+  td.content { max-width: 520px; }
   td.content .short { display: block; }
   td.content .full { display: none; white-space: pre-wrap; }
   td.content.open .short { display: none; }
@@ -44,7 +48,7 @@ HTML = """<!DOCTYPE html>
 </head>
 <body>
 <h1>Корпус страшных историй</h1>
-<div class="sub">strashilka.com — отфильтрованный корпус (без общих и служебных категорий)</div>
+<div class="sub">strashilka.com — 21 623 истории, с рейтингом, голосами и ключевыми словами</div>
 <input id="q" type="search" placeholder="Поиск по заголовку, автору, категории, тексту...">
 <div id="count"></div>
 <table id="t">
@@ -54,6 +58,9 @@ HTML = """<!DOCTYPE html>
   <th data-k="author">Автор</th>
   <th data-k="date">Дата</th>
   <th data-k="category">Категория</th>
+  <th data-k="rating">Рейтинг</th>
+  <th data-k="votes">Голоса</th>
+  <th data-k="keywords">Ключевые слова</th>
   <th data-k="content">Текст</th>
   <th data-k="url">Ссылка</th>
 </tr>
@@ -83,6 +90,9 @@ function render(rows) {
       `<td>${esc(r.author)}</td>` +
       `<td>${esc(r.date)}</td>` +
       `<td>${esc(r.category)}</td>` +
+      `<td>${esc(r.rating)}</td>` +
+      `<td>${esc(r.votes)}</td>` +
+      `<td>${esc(r.keywords)}</td>` +
       `<td class="content"><span class="short">${esc(shortText)}</span>` +
       `<span class="full">${esc(r.content)}</span>` +
       (r.content.length > 220 ? ` <span class="toggle">показать</span>` : "") +
@@ -110,6 +120,7 @@ function applyFilter() {
       r.author.toLowerCase().includes(needle) ||
       r.category.toLowerCase().includes(needle) ||
       r.date.toLowerCase().includes(needle) ||
+      r.keywords.toLowerCase().includes(needle) ||
       r.content.toLowerCase().includes(needle)
     );
   }
@@ -117,6 +128,9 @@ function applyFilter() {
     rows = rows.slice().sort((a, b) => {
       const A = (a[sortKey] || "").toString().toLowerCase();
       const B = (b[sortKey] || "").toString().toLowerCase();
+      if (sortKey === "rating" || sortKey === "votes") {
+        return (parseInt(A) || 0) - (parseInt(B) || 0) > 0 ? sortDir : (parseInt(A) || 0) - (parseInt(B) || 0) < 0 ? -sortDir : 0;
+      }
       return A < B ? -sortDir : A > B ? sortDir : 0;
     });
   }
@@ -135,7 +149,6 @@ document.querySelectorAll("#t th").forEach(th => {
 });
 
 q.addEventListener("input", applyFilter);
-
 applyFilter();
 </script>
 </body>
