@@ -6,3 +6,4 @@ scrape.log
 test_connection.py
 corpus.db
 corpus_filtered.db
+*.save
